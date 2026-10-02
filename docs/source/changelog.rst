@@ -6,6 +6,8 @@ Dev
 
 Fixes
 
+- Decode percent escapes before base64 decoding data URLs.
+
 - Forward the wrapped filesystem's ``local_file`` flag through ``DirFileSystem`` (#1110).
 
 - Report ``DirFileSystem.async_impl`` from the wrapped filesystem instance.

@@ -1,3 +1,4 @@
+from base64 import b64encode
 from urllib.parse import quote_from_bytes
 
 import pytest
@@ -68,5 +69,36 @@ def test_percent_encoded_bytes(uri, expected):
 def test_percent_encoded_all_byte_values():
     data = bytes(range(256))
     uri = "data:application/octet-stream," + quote_from_bytes(data)
+    with fsspec.open(uri, "rb") as f:
+        assert f.read() == data
+
+
+@pytest.mark.parametrize(
+    "encoded, expected",
+    [
+        ("SGVsbG8%3D", b"Hello"),
+        ("%2B%2B%2B%2B", b"\xfb\xef\xbe"),
+        ("%2f%2f%2f%2f", b"\xff\xff\xff"),
+        ("+%2B+%2b", b"\xfb\xef\xbe"),
+        ("", b""),
+    ],
+)
+def test_percent_encoded_base64(encoded, expected):
+    uri = "data:application/octet-stream;base64," + encoded
+    with fsspec.open(uri, "rb") as f:
+        assert f.read() == expected
+
+    fs, path = fsspec.core.url_to_fs(uri)
+    assert fs.cat_file(path) == expected
+    assert fs.info(path)["size"] == len(expected)
+    assert fs.cat_file(path, start=1, end=3) == expected[1:3]
+    assert fs.cat_file(path, start=-2) == expected[-2:]
+
+
+def test_percent_encoded_base64_all_byte_values():
+    data = bytes(range(256))
+    uri = "data:application/octet-stream;base64," + quote_from_bytes(
+        b64encode(data), safe=""
+    )
     with fsspec.open(uri, "rb") as f:
         assert f.read() == data
